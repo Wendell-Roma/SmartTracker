@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Price Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0e1a;
+      --surface: #111827;
+      --border: #1f2937;
+      --accent: #6ee7b7;
+      --accent2: #f59e0b;
+      --danger: #f87171;
+      --text: #f1f5f9;
+      --muted: #6b7280;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+    header {
+      padding: 24px 40px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    header h1 span { color: var(--accent); }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 32px;
+      display: grid;
+      grid-template-columns: 1fr 160px auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+    .field input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 14px; border-radius: 6px;
+      font-family: 'Space Mono', monospace; font-size: 13px; outline: none;
+      transition: border-color .2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    button.primary {
+      background: var(--accent); color: #0b0e1a;
+      border: none; padding: 11px 20px; border-radius: 6px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+      cursor: pointer; transition: opacity .2s; white-space: nowrap;
+    }
+    button.primary:hover { opacity: .85; }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: #374151; }
+    .card .store-badge {
+      display: inline-block; font-size: 10px; font-family: 'Space Mono', monospace;
+      letter-spacing: 1px; text-transform: uppercase;
+      background: var(--border); padding: 3px 8px; border-radius: 4px;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .card h3 { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 14px; color: var(--text); }
+    .card .price-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 10px; }
+    .card .price { font-family: 'Space Mono', monospace; font-size: 26px; color: var(--accent); }
+    .card .target { font-size: 12px; color: var(--muted); }
+    .card .target span { color: var(--accent2); }
+    .badge-available { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+    .badge-available.yes { background: rgba(110,231,183,.12); color: var(--accent); }
+    .badge-available.no  { background: rgba(248,113,113,.12); color: var(--danger); }
+    .card .actions { margin-top: 16px; display: flex; gap: 8px; }
+    .btn-sm {
+      font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-weight: 600; border: 1px solid;
+      text-decoration: none; display: inline-block;
+    }
+    .btn-detail { border-color: var(--border); color: var(--muted); background: transparent; }
+    .btn-detail:hover { color: var(--text); }
+    .btn-del { border-color: transparent; color: var(--danger); background: rgba(248,113,113,.08); }
+    .btn-del:hover { background: rgba(248,113,113,.18); }
+
+    .empty { text-align: center; color: var(--muted); padding: 60px 0; font-size: 15px; }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 14px 20px; border-radius: 8px; font-size: 14px;
+      display: none; z-index: 100;
+    }
+    .toast.show { display: block; animation: fadeIn .3s; }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error   { border-color: var(--danger); color: var(--danger); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Price<span>Monitor</span></h1>
+  <span style="color:var(--muted);font-size:13px;font-family:'Space Mono',monospace">
+    {{ products|length }} produto(s) monitorado(s)
+  </span>
+</header>
+
+<div class="container">
+  <div class="add-form">
+    <div class="field">
+      <label>URL do produto</label>
+      <input id="inp-url" type="url" placeholder="https://www.amazon.com.br/dp/..." />
+    </div>
+    <div class="field">
+      <label>Preço alvo (R$)</label>
+      <input id="inp-price" type="number" step="0.01" placeholder="0,00" />
+    </div>
+    <button class="primary" onclick="addProduct()">+ Monitorar</button>
+  </div>
+
+  {% if products %}
+  <div class="products-grid">
+    {% for p in products %}
+    <div class="card" id="card-{{ p.id }}">
+      <div class="store-badge">{{ p.store }}</div>
+      <h3>{{ p.name }}</h3>
+      <div class="price-row">
+        <div class="price">
+          {% if p.latest_price %}R$ {{ "%.2f"|format(p.latest_price) }}{% else %}—{% endif %}
+        </div>
+        <span class="badge-available {{ 'yes' if p.available else 'no' }}">
+          {{ 'Disponível' if p.available else 'Indisponível' }}
+        </span>
+      </div>
+      {% if p.target_price %}
+      <div class="target">Meta: <span>R$ {{ "%.2f"|format(p.target_price) }}</span></div>
+      {% endif %}
+      <div class="actions">
+        <a href="/product/{{ p.id }}" class="btn-sm btn-detail">Ver histórico</a>
+        <button class="btn-sm btn-del" onclick="deleteProduct({{ p.id }})">Remover</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">Nenhum produto monitorado ainda.<br>Adicione uma URL acima para começar.</div>
+  {% endif %}
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+async function addProduct() {
+  const url   = document.getElementById('inp-url').value.trim();
+  const price = document.getElementById('inp-price').value;
+  if (!url) return showToast('Informe uma URL válida.', 'error');
+  const btn = document.querySelector('button.primary');
+  btn.textContent = 'Adicionando...'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/add', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url, target_price: price || null }),
+    });
+    const data = await res.json();
+    if (res.ok) { showToast('✅ ' + data.name); setTimeout(() => location.reload(), 1500); }
+    else showToast('❌ ' + data.error, 'error');
+  } finally {
+    btn.textContent = '+ Monitorar'; btn.disabled = false;
+  }
+}
+async function deleteProduct(id) {
+  if (!confirm('Remover este produto?')) return;
+  const res = await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    document.getElementById(`card-${id}`)?.remove();
+    showToast('Produto removido.');
+  }
+}
+</script>
+</body>
+</html>

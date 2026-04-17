@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ product.name[:50] }} – Price Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:#0b0e1a;--surface:#111827;--border:#1f2937;
+      --accent:#6ee7b7;--accent2:#f59e0b;--text:#f1f5f9;--muted:#6b7280;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Syne',sans-serif; }
+    header { padding:20px 40px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
+    header a { color:var(--muted); text-decoration:none; font-size:14px; }
+    header a:hover { color:var(--text); }
+    .container { max-width:900px; margin:0 auto; padding:32px 24px; }
+    .meta { margin-bottom:28px; }
+    .store-badge {
+      display:inline-block; font-size:10px; font-family:'Space Mono',monospace;
+      letter-spacing:1px; text-transform:uppercase;
+      background:var(--border); padding:3px 8px; border-radius:4px; color:var(--muted); margin-bottom:10px;
+    }
+    h1 { font-size:20px; font-weight:800; margin-bottom:12px; }
+    .stats { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:28px; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px 20px; min-width:130px; }
+    .stat label { font-size:11px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:4px; }
+    .stat span { font-family:'Space Mono',monospace; font-size:22px; }
+    .stat span.accent  { color:var(--accent); }
+    .stat span.accent2 { color:var(--accent2); }
+    .chart-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; }
+    .chart-wrap h2 { font-size:14px; margin-bottom:16px; color:var(--muted); }
+    a.back { font-size:13px; color:var(--accent); }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/">← Voltar</a>
+  <span style="color:var(--border)">|</span>
+  <span style="font-size:14px;color:var(--muted)">Histórico de preço</span>
+</header>
+
+<div class="container">
+  <div class="meta">
+    <div class="store-badge">{{ product.store }}</div>
+    <h1>{{ product.name }}</h1>
+    <a href="{{ product.url }}" target="_blank" style="font-size:13px;color:var(--muted);">Ver no site →</a>
+  </div>
+
+  {% if chart_data %}
+  {% set latest = chart_data[-1].price %}
+  {% set prices_only = chart_data | map(attribute='price') | list %}
+  <div class="stats">
+    <div class="stat">
+      <label>Preço atual</label>
+      <span class="accent">R$ {{ "%.2f"|format(latest) }}</span>
+    </div>
+    {% if product.target_price %}
+    <div class="stat">
+      <label>Meta</label>
+      <span class="accent2">R$ {{ "%.2f"|format(product.target_price) }}</span>
+    </div>
+    {% endif %}
+    <div class="stat">
+      <label>Registros</label>
+      <span>{{ chart_data|length }}</span>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <h2>Variação de preço</h2>
+    <canvas id="chart" height="100"></canvas>
+  </div>
+  {% else %}
+  <p style="color:var(--muted)">Nenhum histórico disponível ainda.</p>
+  {% endif %}
+</div>
+
+<script>
+const raw = {{ chart_data | tojson }};
+const labels = raw.map(d => d.date);
+const prices = raw.map(d => d.price);
+const target = {{ product.target_price or 'null' }};
+
+const ctx = document.getElementById('chart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Preço (R$)',
+        data: prices,
+        borderColor: '#6ee7b7',
+        backgroundColor: 'rgba(110,231,183,.08)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#6ee7b7',
+        tension: 0.3,
+        fill: true,
+      },
+      ...(target ? [{
+        label: 'Meta',
+        data: labels.map(() => target),
+        borderColor: '#f59e0b',
+        borderDash: [6, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      }] : []),
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#6b7280', font: { family: 'Space Mono', size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#6b7280', font: { family: 'Space Mono', size: 10 } }, grid: { color: '#1f2937' } },
+      y: { ticks: { color: '#6b7280', font: { family: 'Space Mono', size: 10 }, callback: v => 'R$ ' + v.toFixed(2) }, grid: { color: '#1f2937' } },
+    },
+  },
+});
+</script>
+</body>
+</html>

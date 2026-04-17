@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+
+  # ── Dashboard Web ─────────────────────────────────────────────────────────
+  dashboard:
+    build: .
+    container_name: price-monitor-dashboard
+    command: python -m flask --app app.dashboard.app run --host=0.0.0.0 --port=5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - price_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/prices.db
+    restart: unless-stopped
+    depends_on:
+      - scheduler
+
+  # ── Scheduler (scraper periódico) ─────────────────────────────────────────
+  scheduler:
+    build: .
+    container_name: price-monitor-scheduler
+    command: python app/scheduler.py
+    volumes:
+      - price_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/prices.db
+    restart: unless-stopped
+
+volumes:
+  price_data:
+    driver: local
