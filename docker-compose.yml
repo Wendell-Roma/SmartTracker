@@ -23,7 +23,7 @@ services:
   scheduler:
     build: .
     container_name: price-monitor-scheduler
-    command: python app/scheduler.py
+    command: python -m app.scheduler
     volumes:
       - price_data:/app/data
     env_file:

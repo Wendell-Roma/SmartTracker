@@ -3,6 +3,11 @@ FROM python:3.12-slim
 # Dependências do sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libffi-dev libssl-dev curl \
+    # Dependências do Playwright/Chromium (substitui o --with-deps que quebra no slim)
+    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 \
+    libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 \
+    libx11-6 libxext6 fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -11,8 +16,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Instala Playwright e browsers (necessário para sites com JS pesado)
-RUN playwright install chromium --with-deps
+# Instala apenas o browser (sem --with-deps, pois já instalamos as libs acima)
+RUN python -m playwright install chromium
 
 # Copia o restante do projeto
 COPY . .
